@@ -266,7 +266,7 @@ def adsr(
 
         scale = N / sum_n
 
-        sum_n = int(A * scale) + int(A * scale) + int(A * scale)
+        sum_n = int(A * scale) + int(D * scale) + int(R * scale)
 
     S_n = N - sum_n
 
@@ -284,8 +284,8 @@ def adsr(
 
     attack = np.linspace(0, 1, A_n, endpoint=False) if A_n > 0 else np.array([])
     decay = np.linspace(1, S, D_n, endpoint=False) if D_n > 0 else np.array([])
-    sustain = np.one(S_n) * S if S_n > 0 else np.array([])
-    release = np.linspace(S, 0, R_n, endpoint=False) if D_n > 0 else np.array([])
+    sustain = np.ones(S_n) * S if S_n > 0 else np.array([])
+    release = np.linspace(S, 0, R_n, endpoint=False) if R_n > 0 else np.array([])
 
     # --------------------------
     # TODO 4:
