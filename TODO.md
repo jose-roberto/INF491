@@ -2,7 +2,7 @@
 
 - José:
 
-[ ] Arquivo: MICROSYNTH.PY
+[X] Arquivo: MICROSYNTH.PY
 [ ] Evoluções Naturais: E. SINTETIZADOR PERCUSSIVO
 [ ] Instrumento: Tabla
 

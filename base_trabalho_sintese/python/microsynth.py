@@ -128,7 +128,11 @@ def filtro(
 ########################################################
 
 def freq2midi(f: float) -> int:
-    pass
+    
+    assert isinstance(f, (int, float)), 'Frequência deve ser numérica'
+    assert f > 0, 'Frequência deve ser positiva'
+
+    return int(round(69 + 12 * np.log2(f / 440)))
 
 ########################################################
 
@@ -143,7 +147,36 @@ def fm(
     sr: int = 44100,
     retorna_t: bool = False
 ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
-    pass
+
+    assert isinstance(dur, (int, float)), 'dur deve ser um número'
+    assert dur > 0, 'dur deve ser positiva'
+
+    assert isinstance(f_c, (int, float)), 'f_c deve ser um número'
+    assert f_c > 0, 'f_c deve ser positiva'
+
+    assert isinstance(f_m, (int, float)), 'f_m deve ser um número'
+    assert f_m >= 0, 'f_m deve ser não negativa'
+
+    assert isinstance(I, (int, float)), 'I deve ser um número'
+    assert isinstance(sr, int), 'sr deve ser um inteiro'
+
+    assert tipo_fm in ('const', 'mult'), \
+        "tipo_fm deve ser 'const' ou 'mult'"
+
+    assert unidade_fase in ('graus', 'rad'), \
+        "unidade_fase deve ser 'graus' ou 'rad'"
+
+    t = gera_tempo(dur, sr)
+
+    if unidade_fase == 'graus':
+        fase = np.deg2rad(fase)
+
+    if tipo_fm == 'mult':
+        f_m = f_m * f_c
+
+    y = np.sin(2 * np.pi * f_c * t + I * np.sin(2 * np.pi * f_m * t) + fase)
+
+    return (t, y) if retorna_t else y
 
 ########################################################
 
@@ -153,7 +186,18 @@ def am(
     I: float = 0.5,
     sr: int = 44100
 ) -> np.ndarray:
-    pass
+    
+    assert isinstance(y, np.ndarray), 'y deve ser um numpy array'
+    assert isinstance(f_mod, (int, float)), 'f_mod deve ser um número'
+    assert isinstance(I, (int, float)), 'I deve ser um número'
+    assert isinstance(sr, int), 'sr deve ser um inteiro'
+
+    t = gera_tempo(len(y)/sr, sr)
+
+    mod = 1 + I * np.sin(2 * np.pi * f_mod * t)
+
+    return y * mod
+
 
 ########################################################
 #
@@ -203,9 +247,9 @@ def adsr(
     # Converter A, D e R de segundos para amostras.
     # --------------------------
 
-    # A_n = ...
-    # D_n = ...
-    # R_n = ...
+    A_n = int(A * sr)
+    D_n = int(D * sr)
+    R_n = int(R * sr)
 
     # --------------------------
     # TODO 2:
@@ -217,7 +261,14 @@ def adsr(
     # o envelope final não ultrapasse a duração esperada.
     # --------------------------
 
-    # S_n = ...
+    sum_n = A_n + D_n + R_n
+    if sum_n > N:
+
+        scale = N / sum_n
+
+        sum_n = int(A * scale) + int(A * scale) + int(A * scale)
+
+    S_n = N - sum_n
 
     # --------------------------
     # TODO 3:
@@ -231,24 +282,25 @@ def adsr(
     # Use operações vetorizadas com NumPy.
     # --------------------------
 
-    # attack = ...
-    # decay = ...
-    # sustain = ...
-    # release = ...
+    attack = np.linspace(0, 1, A_n, endpoint=False) if A_n > 0 else np.array([])
+    decay = np.linspace(1, S, D_n, endpoint=False) if D_n > 0 else np.array([])
+    sustain = np.one(S_n) * S if S_n > 0 else np.array([])
+    release = np.linspace(S, 0, R_n, endpoint=False) if D_n > 0 else np.array([])
 
     # --------------------------
     # TODO 4:
     # Concatenar as fases para formar o envelope final.
     # --------------------------
 
-    # env = ...
+    env = np.concatenate([attack, decay, sustain, release])
 
     # --------------------------
     # TODO 5:
     # Garantir que o envelope tenha exatamente N amostras.
     # --------------------------
 
-    # env = ...
+    if len(env) != N:
+        env = env[:N]
 
     return env
 
@@ -332,20 +384,37 @@ def sintetiza(
 
     if forma == 'senoide':
         # TODO: gerar senoide
-        pass
+        y = np.sin(2 * np.pi * f * t + fase_rad)
 
     elif forma == 'quadrada':
         # TODO: somar harmônicos ímpares
-        pass
+        for k in range(1, 2 * n, 2):
+
+            if k * f >= sr / 2: 
+                break
+
+            y += (1 / k) * np.sin(2 * np.pi * k * f * t + fase_rad)
 
     elif forma == 'triangular':
         # TODO: somar harmônicos ímpares com queda mais rápida
         # e alternância de sinal
-        pass
+        for idx, k in enumerate(range(1, 2 * n, 2)):
+
+            if k * f >= sr / 2: 
+                break
+
+            sinal = (-1)**idx
+
+            y += sinal * (1 / k**2) * np.sin(2 * np.pi * k * f * t + fase_rad)
 
     elif forma == 'dente':
         # TODO: somar harmônicos inteiros
-        pass
+        for k in range(1, n + 1):
+
+            if k * f >= sr / 2:
+                break
+
+            Y += (1 / k) * np.sin(2 * np.pi * k * f * t + fase_rad)
 
     # --------------------------
     # Normalização
@@ -413,7 +482,7 @@ class Instrumento:
 
         if self.forma == 'fm' and self.fm_params is None:
             raise ValueError("Parâmetros de FM devem ser informados quando forma='fm'")
-
+        
         # --------------------------
         # TODO 1:
         # Gerar o sinal base.
@@ -426,18 +495,43 @@ class Instrumento:
         # use a função fm.
         # --------------------------
 
-        # t = ...
-        # y = ...
+        if self.forma in formas_validas:
+
+            t, y = sintetiza(f, self.forma, self.n_harm, dur, sr, self.fase, self.unidade_fase, retorna_t)
+
+        elif self.forma == 'fm':
+
+            f_c = self.fm_params['f_c']
+            f_m = self.fm_params['f_m']
+            I_fm = self.fm_params['I']
+            tipo_fm = self.fm_params['tipo_fm']
+
+            t, y = fm(dur, f_c, f_m, I_fm, tipo_fm, self.fase, self.unidade_fase, sr, retorna_t)
 
         # --------------------------
         # TODO 2:
         # Aplicar envelope ADSR, caso self.adsr_params não seja None.
         # --------------------------
 
+        if self.adsr_params is not None:
+
+            A, D, S, R = self.adsr_params
+
+            env = adsr(dur, sr, A, D, S, R) 
+
+            y *= env  
+            
         # --------------------------
         # TODO 3:
         # Aplicar modulação de amplitude, caso self.am_params não seja None.
         # --------------------------
+
+        if self.am_params is not None:
+
+            f_mod = self.am_params['f_mod']
+            I_am = self.am_params['I']
+
+            y = am(y, f_mod, I_am, sr)
 
         # --------------------------
         # TODO 4:
@@ -449,10 +543,25 @@ class Instrumento:
         # Nesse caso, use a função fm_time_warp.
         # --------------------------
 
+        if self.forma != 'fm' and self.fm_params is not None:
+
+            f_mod = self.fm_params['f_mod']
+            I_fm = self.fm_params['I']
+
+            y = fm_time_warp(y, t, f_mod, I_fm)
+
         # --------------------------
         # TODO 5:
         # Aplicar filtro, caso self.filtro_params não seja None.
         # --------------------------
+
+        if self.filtro_params is not None:
+
+            cutoff_low = self.filtro_params['cutoff_low']
+            cutoff_high = self.filtro_params['cutoff_high']
+            metodo = self.filtro_params['metodo']
+
+            y = filtro(y, cutoff_low, cutoff_high, metodo, sr)
 
         # --------------------------
         # TODO 6 opcional:
@@ -467,10 +576,13 @@ class Instrumento:
         # Aplicar o fator de intensidade amp.
         # --------------------------
 
+        y *= amp
+
         # --------------------------
         # TODO 8:
         # Retornar y ou (t, y), de acordo com retorna_t.
         # --------------------------
+        return (t, y) if retorna_t else y
 
 """
 Exemplo de uso:
