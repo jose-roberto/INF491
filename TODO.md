@@ -3,11 +3,11 @@
 - José:
 
 - [X] Arquivo: MICROSYNTH.PY
-- [ ] Evoluções Naturais: E. SINTETIZADOR PERCUSSIVO
-- [ ] Instrumento: Tabla
+- [X] Evoluções Naturais: E. SINTETIZADOR PERCUSSIVO
+- [X] Instrumento: Tabla
 
 - André:
 
-- [ ] Arquivo: MICROPLAYER.PY
-- [ ] Evoluções Naturais: C. ENVELOPE DEPENDENTE DE VELOCITY / AMP
-- [ ] Instrumento: Sino
+- [X] Arquivo: MICROPLAYER.PY
+- [X] Evoluções Naturais: C. ENVELOPE DEPENDENTE DE VELOCITY / AMP
+- [X] Instrumento: Sino
